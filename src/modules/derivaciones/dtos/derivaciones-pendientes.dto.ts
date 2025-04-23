@@ -5,3 +5,8 @@ export class DerivacionesPendientesDto {
   @IsString()
   codigoPrestadorPrivado: string;
 }
+export class DetalleDerivacionesPendientesDto {
+  @IsNotEmpty()
+  @IsString()
+  codigoDerivacion: string;
+}

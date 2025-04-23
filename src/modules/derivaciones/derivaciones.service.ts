@@ -1,52 +1,37 @@
 import { Injectable, Inject } from '@nestjs/common';
-import * as oracledb from 'oracledb';
-import { DerivacionesPendientesDto } from './dtos/derivaciones-pendientes.dto';
+import { DerivacionesPendientesDto, DetalleDerivacionesPendientesDto } from './dtos/derivaciones-pendientes.dto';
 import {
+  BSConsultarDetalleDerivacionOutput,
   DerivacionCompleta,
   DerivacionPendiente,
-  InfoBeneficiario,
   ResultadoFinal,
-  ResultadoProcedimiento,
 } from './interfaces/derivaciones.interface';
-import {} from './dtos/derivaciones-pendientes.dto';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { DerivacionesRepository } from './repositories/derivaciones.repository';
+import { ApiClienteService } from '../shared/services/api-cliente/api-cliente.service';
+import { getNombreComuna, getNombreRegion } from '../shared/utils/utils';
+import { OhiRepository } from '../shared/repositories/ohiRepository';
 
 @Injectable()
 export class DerivacionesService {
   constructor(
-    @Inject('DATA_DIALISIS')
-    private readonly connection: oracledb.Connection,
-    private readonly httpService: HttpService,
+    private readonly derivacionesRepository: DerivacionesRepository,
+    private readonly ohiRepository: OhiRepository,
+    private readonly apiClienteService: ApiClienteService,
   ) {}
 
-  private async consultaBaseBeneficiario(run: string): Promise<InfoBeneficiario> {
-    try {
-      const urlInfoBeneficiario =
-        process.env.URL_CONSULTA_RUT_BASE_BENEFICIARIO;
-      const url = `${urlInfoBeneficiario}/${run}`;
 
-      const response = await firstValueFrom(this.httpService.get(url));
-      return response.data.InfoBeneficiario || {};
-    } catch (error) {
-      console.error(`Error al consultar beneficiario ${run}:`, error);
-      return {};
-    }
-  }
-
-  private async procesarDerivacion(
-    derivacion: DerivacionPendiente,
-  ): Promise<DerivacionCompleta> {
+  private async procesarDerivacion(derivacion: DerivacionPendiente): Promise<DerivacionCompleta> {
     try {
-      const infoBeneficiario = await this.consultaBaseBeneficiario(
+      
+      const infoBeneficiario = await this.apiClienteService.consultaBaseBeneficiario(
         derivacion.RUN || '',
       );
 
       return {
         codigoDerivacion: derivacion.CODIGODERIVACION?.toString(),
-        nombres: infoBeneficiario.nombres,
-        apellidoPaterno: infoBeneficiario.apellidoPaterno,
-        apellidoMaterno: infoBeneficiario.apellidoMaterno,
+        nombres: infoBeneficiario.infoTitular?.nombres,
+        apellidoPaterno: infoBeneficiario.infoTitular?.apellidoPaterno,
+        apellidoMaterno: infoBeneficiario.infoTitular?.apellidoMaterno,
         run: derivacion.RUN,
         codigoBeneficiario: derivacion.CODIGOBENEFICIARIO?.toString(),
         fechaDerivacion: derivacion.FECHADERIVACION,
@@ -66,8 +51,8 @@ export class DerivacionesService {
   async listarDerivacionesPendientes(
     codigoPrestadorPrivado: DerivacionesPendientesDto,
   ): Promise<ResultadoFinal> {
-    // Aquí llamas a tu procedimiento almacenado ya implementado
-    const derivacionesPendientes = await this.obtenerDerivacionesPendientes(
+    // Llamar procedimiento almacenado
+    const derivacionesPendientes = await this.derivacionesRepository.obtenerDerivacionesPendientes(
       codigoPrestadorPrivado,
     );
 
@@ -94,47 +79,57 @@ export class DerivacionesService {
     };
   }
 
-  async obtenerDerivacionesPendientes(
-    dto: DerivacionesPendientesDto,
-  ): Promise<ResultadoProcedimiento> {
+  async obtenerDetalleDerivacionPendiente(
+    codigoDerivacion: DetalleDerivacionesPendientesDto,
+  ): Promise<{ BS_ConsultarDetalleDerivacionOutput: BSConsultarDetalleDerivacionOutput[] }> {
     try {
-      const result = await this.connection.execute(
-        `BEGIN INTEGRACION.P_GEO_DERIVACIONES_PENDIENTES(:pkPrestador, :cursorDatos, :codigoMensaje, :mensaje); END;`,
-        {
-          pkPrestador: dto.codigoPrestadorPrivado,
-          cursorDatos: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
-          codigoMensaje: {
-            dir: oracledb.BIND_OUT,
-            type: oracledb.STRING,
-            maxSize: 100,
-          },
-          mensaje: {
-            dir: oracledb.BIND_OUT,
-            type: oracledb.STRING,
-            maxSize: 4000,
-          },
-        },
+      const detalleDerivacion = await this.derivacionesRepository.obtenerDetalleDerivacionPendiente(
+        codigoDerivacion,
       );
 
-      const outBinds = result.outBinds as unknown as {
-        cursorDatos: oracledb.ResultSet<DerivacionPendiente>;
-        codigoMensaje: string;
-        mensaje: string;
+      const data = detalleDerivacion.datos[0]
+      const run = data[7]
+      
+      const [infoBeneficiario, nombreComuna, nombreRegion, descripcionPrestacion] = await Promise.all([
+        this.apiClienteService.consultaBaseBeneficiario(run || ''),
+        getNombreComuna(data[8], data[9], this.apiClienteService),
+        getNombreRegion(data[9], this.apiClienteService),
+        this.ohiRepository.obtenerNombrePrestacion(data[1]),
+      ]);
+      
+  
+      const detalleDerivacionPendiente: BSConsultarDetalleDerivacionOutput = {
+        nombres: infoBeneficiario.infoTitular.nombres || '',
+        apellidoPaterno: infoBeneficiario.infoTitular.apellidoPaterno || '',
+        apellidoMaterno: infoBeneficiario.infoTitular.apellidoMaterno || '',
+        tramo: infoBeneficiario.acreditacion.condicionActual.tramoIngreso || '',
+        sexo: infoBeneficiario.infoTitular.sexo || '',
+        direccion: data[0] || '',
+        codigoPrestacion: data[1] || '',
+        descripcionPrestacion: descripcionPrestacion,
+        diagnostico: data[3] || '',
+        email: data[4] || '',
+        telefono1: data[5] || null,
+        telefono2: data[6] || null,
+        fechaNacimiento: infoBeneficiario.infoTitular.fechaNacimiento || '',
+        run: run || '',
+        codigoComuna: data[8] || null,
+        codigoRegion: data[9] || null,
+        codigoBeneficiario: data[2] || null,
+        nombreComuna: nombreComuna,
+        nombreRegion: nombreRegion,
+        hepatitisB: data[10] || null,
+        cuartoTurno: data[11] || null,
+        tipoDerivacion: data[12] || null,
       };
-      const outCursor = outBinds.cursorDatos;
-      const rows = await outCursor.getRows();
-      await outCursor.close();
-
+  
       return {
-        datos: rows as DerivacionPendiente[],
-        codigoMensaje: outBinds.codigoMensaje,
-        mensaje: outBinds.mensaje,
+        BS_ConsultarDetalleDerivacionOutput: [detalleDerivacionPendiente],
       };
     } catch (error) {
-      console.error('Error al ejecutar procedimiento:', error);
-      throw new Error(
-        `Error al obtener derivaciones pendientes: ${error.message}`,
-      );
+      console.error(`Error al obtener detalle de derivación:`, error);
+      throw new Error(`Error en DerivacionesService: ${error.message}`);
     }
   }
+
 }

@@ -4,10 +4,12 @@ import { DerivacionesController } from './derivaciones.controller';
 import { DerivacionesService } from './derivaciones.service';
 import { databaseProviders } from '../database/database.providers';
 import { HttpModule } from '@nestjs/axios';
+import { DerivacionesRepository } from './repositories/derivaciones.repository';
+import { SharedModule } from '../shared/shared.module';
 
 @Module({
-  imports: [HttpModule],
-  providers: [...databaseProviders, DerivacionesService],
+  imports: [HttpModule, SharedModule],
+  providers: [...databaseProviders, DerivacionesService, DerivacionesRepository],
   controllers: [DerivacionesController],
 })
 export class DerivacionesModule {}
