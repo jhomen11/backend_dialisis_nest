@@ -20,13 +20,12 @@ export class DerivacionesService {
     private readonly httpService: HttpService,
   ) {}
 
-  private async consultaBaseBeneficiario(
-    run: string,
-  ): Promise<InfoBeneficiario> {
+  private async consultaBaseBeneficiario(run: string): Promise<InfoBeneficiario> {
     try {
       const urlInfoBeneficiario =
         process.env.URL_CONSULTA_RUT_BASE_BENEFICIARIO;
       const url = `${urlInfoBeneficiario}/${run}`;
+
       const response = await firstValueFrom(this.httpService.get(url));
       return response.data.InfoBeneficiario || {};
     } catch (error) {

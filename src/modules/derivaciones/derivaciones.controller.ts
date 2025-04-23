@@ -9,7 +9,7 @@ export class DerivacionesController {
 
   @Get('Rs_ListarDerivacionesPendientes')
   async listarDerivacionesPendientes(
-    @Query('codigoPrestadorPrivado') codigoPrestadorPrivado: string
+    @Query('codigoPrestadorPrivado') codigoPrestadorPrivado: string,
   ): Promise<ResultadoFinal> {
     const dto: DerivacionesPendientesDto = { codigoPrestadorPrivado };
     return this.derivacionesService.listarDerivacionesPendientes(dto);
