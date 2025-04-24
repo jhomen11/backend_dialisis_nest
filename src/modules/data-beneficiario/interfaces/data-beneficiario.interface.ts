@@ -3,28 +3,28 @@ export interface ConsultaBeneficiarioResponse {
 }
 
 export interface BSConsultarRutBeneficiarioOutput {
-    nombres:               string;
-    apellidoPaterno:       string;
-    apellidoMaterno:       string;
-    tramo:                 string;
-    sexo:                  number;
-    direccion:             string;
-    codigoPrestacion:      string;
-    codigoPrestacionPU:    number;
-    descripcionPrestacion: string;
-    diagnostico:           string;
-    email:                 string;
-    telefono1:             string;
+    nombres:               string | null;
+    apellidoPaterno:       string | null;
+    apellidoMaterno:       string | null;
+    tramo:                 string | null;
+    sexo:                  number | null;
+    direccion:             string | null;
+    codigoPrestacion:      string | null;
+    codigoPrestacionPU:    number | null;
+    descripcionPrestacion: string | null;
+    diagnostico:           string | null;
+    email:                 string | null;
+    telefono1:             string | null;
     telefono2:             null;
-    fechaNacimiento:       Date;
-    run:                   string;
-    codigoComuna:          string;
-    codigoRegion:          string;
-    codigoBeneficiario:    string;
-    nombreComuna:          string;
-    nombreRegion:          string;
-    hepatitisB:            number;
-    fechaIniTratamiento:   Date;
+    fechaNacimiento:       Date | null;
+    run:                   string | null;
+    codigoComuna:          string | null;
+    codigoRegion:          string | null;
+    codigoBeneficiario:    string | null;
+    nombreComuna:          string | null;
+    nombreRegion:          string | null;
+    hepatitisB:            number | null;
+    fechaIniTratamiento:   Date | null;
     hipertensionArterial:  null;
     diabetesTipoII:        null;
 }

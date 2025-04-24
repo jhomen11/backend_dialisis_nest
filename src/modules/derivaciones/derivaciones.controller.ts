@@ -1,7 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import { DerivacionesService } from './derivaciones.service';
-import { BSConsultarDetalleDerivacionResponse, ResultadoFinal } from './interfaces/derivaciones.interface';
+import { BSConsultarDetalleDerivacionResponse, DerivacionBeneficiarioResponse, ResultadoFinal } from './interfaces/derivaciones.interface';
 import { DerivacionesPendientesDto, DetalleDerivacionesPendientesDto } from './dtos/derivaciones-pendientes.dto';
+import { ListarDerivacionesDto } from './dtos/derivaciones-beneficiario.dto';
 
 @Controller()
 export class DerivacionesController {
@@ -21,5 +22,13 @@ export class DerivacionesController {
   ): Promise<BSConsultarDetalleDerivacionResponse> {
     const dto: DetalleDerivacionesPendientesDto = { codigoDerivacion };
     return this.derivacionesService.obtenerDetalleDerivacionPendiente(dto);
+  }
+
+  @Post('Rs_ListarDerivacionesBeneficiario')
+  @HttpCode(200)
+  async listarDerivacionesBeneficiario(
+    @Body() listarDerivacionesDto: ListarDerivacionesDto,
+  ): Promise<DerivacionBeneficiarioResponse> {
+    return this.derivacionesService.obtenerDerivacionesBeneficiario(listarDerivacionesDto);
   }
 }

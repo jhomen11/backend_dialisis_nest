@@ -1,7 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import * as oracledb from 'oracledb';
 import { DerivacionesPendientesDto, DetalleDerivacionesPendientesDto } from '../dtos/derivaciones-pendientes.dto';
-import { ResultadoDetalleDerivacion, ResultadoProcedimiento } from '../interfaces/derivaciones.interface';
+import { DerivacionBeneficiarioResponse, ResultadoDetalleDerivacion, ResultadoProcedimiento } from '../interfaces/derivaciones.interface';
+import { ListarDerivacionesDto } from '../dtos/derivaciones-beneficiario.dto';
 
 @Injectable()
 export class DerivacionesRepository {
@@ -106,6 +107,61 @@ export class DerivacionesRepository {
       throw new Error(
         `Error en DerivacionesRepository: ${error.message}`,
       );
+    }
+  }
+
+    /**
+     * Obtiene las derivaciones de un beneficiario.
+     * @param params - Objeto que contiene el código de autorización y el RUT del beneficiario.
+     * @returns Un objeto DerivacionBeneficiarioResponse con los datos de las derivaciones y mensajes de error o éxito.
+     */
+  async obtenerDerivacionesBeneficiarios(params: ListarDerivacionesDto): Promise<DerivacionBeneficiarioResponse> {
+
+    try {
+      const result = await this.connection.execute(
+        `BEGIN INTEGRACION.P_LISTAR_GEO_AUTORIZACIONES(
+         :vi_cod_autorizacion,
+             :vi_rut_beneficiario,
+             :vocur_datos,
+             :vovc_codigo_mensaje,
+             :vovc_mensaje
+        ); END;`,
+        {
+          vi_cod_autorizacion: params.codigoAutorizacion || null,
+          vi_rut_beneficiario: params.rutBeneficiario || null,
+          vocur_datos: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+          vovc_codigo_mensaje: {
+            dir: oracledb.BIND_OUT,
+            type: oracledb.STRING,
+            maxSize: 100,
+          },
+          vovc_mensaje: {
+            dir: oracledb.BIND_OUT,
+            type: oracledb.STRING,
+            maxSize: 4000,
+          },
+        }
+      );
+      const outBinds = result.outBinds as unknown as {
+        vocur_datos: oracledb.ResultSet<any>;
+        vovc_codigo_mensaje: string;
+        vovc_mensaje: string;
+      };
+      const outCursor = outBinds.vocur_datos;
+      const rows = await outCursor.getRows();
+      await outCursor.close();
+
+      return {
+        datos: rows,
+        codigoMensaje: outBinds.vovc_codigo_mensaje,
+        mensaje: outBinds.vovc_mensaje,
+      };
+    } catch (error) {
+      console.error('Error al obtener derivaciones de beneficiarios:', error);
+      throw new Error(
+        `Error en DerivacionesRepository: ${error.message}`,
+      );
+      
     }
   }
 }

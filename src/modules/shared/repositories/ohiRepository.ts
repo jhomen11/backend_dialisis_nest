@@ -27,4 +27,25 @@ export class OhiRepository {
       throw new Error('Error al obtener nombre de prestación');
     }
   }
+
+  async obtenerNombrePrestador(codigoPrestador: string): Promise<string> {
+    try {
+      const result = await this.connection.execute(
+        `BEGIN :result := F_NOMBRE_PRESTADOR(:codigo); END;`,
+        {
+          codigo: codigoPrestador,
+          result: {
+            dir: oracledb.BIND_OUT,
+            type: oracledb.STRING,
+            maxSize: 200,
+          },
+        },
+      );
+
+      return (result.outBinds as { result: string }).result;
+    } catch (error) {
+      console.error('Error al ejecutar función Oracle:', error);
+      throw new Error('Error al obtener nombre de prestación');
+    }
+  }
 }

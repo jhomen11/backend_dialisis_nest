@@ -86,3 +86,27 @@ export interface BSConsultarDetalleDerivacionOutput {
 export interface BSConsultarDetalleDerivacionResponse {
   BS_ConsultarDetalleDerivacionOutput: BSConsultarDetalleDerivacionOutput[];
 }
+
+
+export interface DerivacionBeneficiario {
+  CODIGO_PRESTACION: string;
+  DT_FECHA_HASTA: Date;
+  PRESTACION: string;
+  PRESTADOR: string;
+  BENEFICIARIO: string;
+  FECHA_INICIO: Date;
+  FECHA_HASTA: Date;
+  SOLICITANTE: string;
+  COD_CRITERIO_DERIVACION: number;
+  TIPO_DERIVACION: string;
+  CONDICION: string;
+  COD_ESTADO_DERIVACION: number;
+  ESTADO: string;
+  TRAMO_KM: number;
+}
+
+export interface DerivacionBeneficiarioResponse {
+  codigoMensaje: string;
+  mensaje: string;
+  datos: DerivacionBeneficiario[];
+}
