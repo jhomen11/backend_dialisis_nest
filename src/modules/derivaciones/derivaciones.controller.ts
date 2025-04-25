@@ -1,14 +1,24 @@
 import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DerivacionesService } from './derivaciones.service';
-import { BSConsultarDetalleDerivacionResponse, DerivacionBeneficiarioResponse, ResultadoFinal } from './interfaces/derivaciones.interface';
-import { DerivacionesPendientesDto, DetalleDerivacionesPendientesDto } from './dtos/derivaciones-pendientes.dto';
+import {
+  BSConsultarDetalleDerivacionResponse,
+  DerivacionBeneficiarioResponse,
+  ResultadoFinal,
+} from './interfaces/derivaciones.interface';
+import {
+  DerivacionesPendientesDto,
+  DetalleDerivacionesPendientesDto,
+} from './dtos/derivaciones-pendientes.dto';
 import { ListarDerivacionesDto } from './dtos/derivaciones-beneficiario.dto';
 
+@ApiTags('Derivaciones')
 @Controller()
 export class DerivacionesController {
   constructor(private readonly derivacionesService: DerivacionesService) {}
 
   @Get('Rs_ListarDerivacionesPendientes')
+  @ApiQuery({ name: 'codigoPrestadorPrivado', required: true, description: 'Código del prestador privado, Ejem: 77022430-6' })
   async listarDerivacionesPendientes(
     @Query('codigoPrestadorPrivado') codigoPrestadorPrivado: string,
   ): Promise<ResultadoFinal> {
@@ -17,6 +27,7 @@ export class DerivacionesController {
   }
 
   @Get('Rs_DetalleDerivacion')
+  @ApiQuery({ name: 'codigoDerivacion', required: true, description: 'Código de la derivación, Ejem: 295367' })
   async listarDetalleDerivacionPendiente(
     @Query('codigoDerivacion') codigoDerivacion: string,
   ): Promise<BSConsultarDetalleDerivacionResponse> {
@@ -29,6 +40,8 @@ export class DerivacionesController {
   async listarDerivacionesBeneficiario(
     @Body() listarDerivacionesDto: ListarDerivacionesDto,
   ): Promise<DerivacionBeneficiarioResponse> {
-    return this.derivacionesService.obtenerDerivacionesBeneficiario(listarDerivacionesDto);
+    return this.derivacionesService.obtenerDerivacionesBeneficiario(
+      listarDerivacionesDto,
+    );
   }
 }

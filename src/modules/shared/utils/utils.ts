@@ -8,9 +8,11 @@ export async function getNombreRegion(
   try {
     const dataRegion = await apiClienteService.listarRegiones();
 
-    for (const region of dataRegion.bodyResponse.coleccion.item) {
-      if (region.codigoPrincipal === codigoRegion.trim()) {
-        return region.descripcion;
+    if (dataRegion.bodyResponse.coleccion.item) {
+      for (const region of dataRegion.bodyResponse.coleccion.item) {
+        if (region.codigoPrincipal === codigoRegion.trim()) {
+          return region.descripcion;
+        }
       }
     }
     return 'Sin Región';
@@ -20,18 +22,21 @@ export async function getNombreRegion(
   }
 }
 
-
 export async function getNombreComuna(
   codigoComuna: string,
   codigoRegion: string,
   apiClienteService: ApiClienteService,
 ): Promise<string> {
   try {
-    const dataComuna = await apiClienteService.listarComuna(codigoRegion.trim());
+    const dataComuna = await apiClienteService.listarComuna(
+      codigoRegion.trim(),
+    );
 
-    for (const comuna of dataComuna.bodyResponse.coleccion.item) {
-      if (comuna.codigoPrincipal === codigoComuna.trim()) {
-        return comuna.descripcion;
+    if (dataComuna.bodyResponse.coleccion.item) {
+      for (const comuna of dataComuna.bodyResponse.coleccion.item) {
+        if (comuna.codigoPrincipal === codigoComuna.trim()) {
+          return comuna.descripcion;
+        }
       }
     }
     return 'Sin comuna';
@@ -41,7 +46,10 @@ export async function getNombreComuna(
   }
 }
 
-export const getNombreBeneficiario = async (rut: string, apiClienteService: ApiClienteService): Promise<string> => {
+export const getNombreBeneficiario = async (
+  rut: string,
+  apiClienteService: ApiClienteService,
+): Promise<string> => {
   try {
     const resp = await apiClienteService.consultaBaseBeneficiario(rut);
     const nombreBeneficiario = `${resp.infoTitular?.nombres} ${resp.infoTitular?.apellidoPaterno} ${resp.infoTitular?.apellidoMaterno}`;
@@ -49,35 +57,34 @@ export const getNombreBeneficiario = async (rut: string, apiClienteService: ApiC
   } catch (error) {
     console.error('Error al obtener el nombre del beneficiario:', error);
     return Promise.resolve('Sin nombre');
-    
   }
-}
+};
 
-export const createEmptyBeneficiario = ():BSConsultarRutBeneficiarioOutput  => {
-  return{
+export const createEmptyBeneficiario = (): BSConsultarRutBeneficiarioOutput => {
+  return {
     nombres: null,
-        apellidoPaterno: null,
-        apellidoMaterno: null,
-        tramo: null,
-        sexo: null,
-        direccion: null,
-        codigoPrestacion: null,
-        codigoPrestacionPU: null,
-        descripcionPrestacion: null,
-        diagnostico: null,
-        email: null,
-        telefono1: null,
-        telefono2: null,
-        fechaNacimiento: null,
-        run: null,
-        codigoComuna: null,
-        codigoRegion: null,
-        codigoBeneficiario: null,
-        nombreComuna: null,
-        nombreRegion: null,
-        hepatitisB: null,
-        fechaIniTratamiento: null,
-        hipertensionArterial: null,
-        diabetesTipoII: null,
-  }
-}
+    apellidoPaterno: null,
+    apellidoMaterno: null,
+    tramo: null,
+    sexo: null,
+    direccion: null,
+    codigoPrestacion: null,
+    codigoPrestacionPU: null,
+    descripcionPrestacion: null,
+    diagnostico: null,
+    email: null,
+    telefono1: null,
+    telefono2: null,
+    fechaNacimiento: null,
+    run: null,
+    codigoComuna: null,
+    codigoRegion: null,
+    codigoBeneficiario: null,
+    nombreComuna: null,
+    nombreRegion: null,
+    hepatitisB: null,
+    fechaIniTratamiento: null,
+    hipertensionArterial: null,
+    diabetesTipoII: null,
+  };
+};
