@@ -13,9 +13,6 @@ export interface ResultadoProcedimiento {
   mensaje: string;
 }
 
-
-
-
 export interface DerivacionCompleta {
   codigoDerivacion?: string;
   nombres?: string;
@@ -110,3 +107,31 @@ export interface DerivacionBeneficiarioResponse {
   mensaje: string;
   datos: DerivacionBeneficiario[];
 }
+
+
+export interface DerivacionesPendientesDzResponse {
+  BS_ListarDerivacionesManualesOutput: BSListarDerivacionesManualesOutput[];
+}
+
+export interface BSListarDerivacionesManualesOutput {
+  codigoDerivacion:       number;
+  nombres:                string;
+  apellidoPaterno:        string;
+  apellidoMaterno:        string;
+  run:                    string;
+  dv:                     string;
+  codigoBeneficiario:     string;
+  fechaDerivacion:        Date;
+  codigoPrestacion:       string;
+  nombrePrestacion:       string;
+  codigoPrestadorPublico: string;
+  direccion:              null | string;
+  codigoComuna:           string;
+  nombreComuna:           string;
+  codigoRegion:           string;
+  nombreRegion:           string;
+  nombrehospital:         string;
+  motivoRechazo:          null | string;
+  comentarioRechazo:      null | string;
+}
+

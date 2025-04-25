@@ -10,3 +10,9 @@ export class DetalleDerivacionesPendientesDto {
   @IsString()
   codigoDerivacion: string;
 }
+
+export class ListarDerivacionesDzDto {
+  @IsNotEmpty()
+  @IsString()
+  codigoDZ: string;
+}

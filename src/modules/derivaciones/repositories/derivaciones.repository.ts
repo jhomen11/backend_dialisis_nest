@@ -1,7 +1,15 @@
 import { Injectable, Inject } from '@nestjs/common';
 import * as oracledb from 'oracledb';
-import { DerivacionesPendientesDto, DetalleDerivacionesPendientesDto } from '../dtos/derivaciones-pendientes.dto';
-import { DerivacionBeneficiarioResponse, ResultadoDetalleDerivacion, ResultadoProcedimiento } from '../interfaces/derivaciones.interface';
+import {
+  DerivacionesPendientesDto,
+  DetalleDerivacionesPendientesDto,
+  ListarDerivacionesDzDto,
+} from '../dtos/derivaciones-pendientes.dto';
+import {
+  DerivacionBeneficiarioResponse,
+  ResultadoDetalleDerivacion,
+  ResultadoProcedimiento,
+} from '../interfaces/derivaciones.interface';
 import { ListarDerivacionesDto } from '../dtos/derivaciones-beneficiario.dto';
 
 @Injectable()
@@ -10,11 +18,11 @@ export class DerivacionesRepository {
     @Inject('DATA_DIALISIS') private readonly connection: oracledb.Connection,
   ) {}
 
-    /**
-     * Obtiene las derivaciones pendientes de un prestador privado.
-     * @param codigoPrestadorPrivado - Objeto que contiene el código del prestador privado.
-     * @returns Un objeto ResultadoProcedimiento con los datos de las derivaciones y mensajes de error o éxito.
-     */
+  /**
+   * Obtiene las derivaciones pendientes de un prestador privado.
+   * @param codigoPrestadorPrivado - Objeto que contiene el código del prestador privado.
+   * @returns Un objeto ResultadoProcedimiento con los datos de las derivaciones y mensajes de error o éxito.
+   */
   async obtenerDerivacionesPendientes(
     codigoPrestadorPrivado: DerivacionesPendientesDto,
   ): Promise<ResultadoProcedimiento> {
@@ -54,17 +62,62 @@ export class DerivacionesRepository {
       };
     } catch (error) {
       console.error('Error al obtener derivaciones pendientes:', error);
-      throw new Error(
-        `Error en DerivacionesRepository: ${error.message}`,
-      );
+      throw new Error(`Error en DerivacionesRepository: ${error.message}`);
     }
   }
 
-    /**
-     * Obtiene el detalle de una derivación pendiente.
-     * @param codigoDerivacion - Objeto que contiene el código de la derivación.
-     * @returns Un objeto ResultadoProcedimiento con los datos de la derivación y mensajes de error o éxito.
-     */
+  /**
+   * Obtiene las derivaciones de una dirección zonal.
+   * @param codigoDZ - Objeto que contiene el código de la dirección zonal.
+   * @returns Un objeto ResultadoProcedimiento con los datos de las derivaciones por dz y mensajes de error o éxito.
+   */
+  async obtenerDerivacionesManualesDz(
+    codigoDZ: ListarDerivacionesDzDto,
+  ): Promise<ResultadoProcedimiento> {
+    try {
+      const result = await this.connection.execute(
+        `BEGIN INTEGRACION.P_GEO_L_DERIVACIONES_MANUALES(:codigoDz, :cursorDatos, :codigoMensaje, :mensaje); END;`,
+        {
+          codigoDz: codigoDZ.codigoDZ,
+          cursorDatos: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+          codigoMensaje: {
+            dir: oracledb.BIND_OUT,
+            type: oracledb.STRING,
+            maxSize: 100,
+          },
+          mensaje: {
+            dir: oracledb.BIND_OUT,
+            type: oracledb.STRING,
+            maxSize: 4000,
+          },
+        },
+      );
+
+      const outBinds = result.outBinds as unknown as {
+        cursorDatos: oracledb.ResultSet<any>;
+        codigoMensaje: string;
+        mensaje: string;
+      };
+
+      const outCursor = outBinds.cursorDatos;
+      const rows = await outCursor.getRows();
+      await outCursor.close();
+
+      return {
+        datos: rows,
+        codigoMensaje: outBinds.codigoMensaje,
+        mensaje: outBinds.mensaje,
+      };
+    } catch (error) {
+      console.error('Error al obtener derivaciones manuales DZ:', error);
+      throw new Error(`Error en DerivacionesRepository: ${error.message}`);
+    }
+  }
+  /**
+   * Obtiene el detalle de una derivación pendiente.
+   * @param codigoDerivacion - Objeto que contiene el código de la derivación.
+   * @returns Un objeto ResultadoProcedimiento con los datos de la derivación y mensajes de error o éxito.
+   */
   async obtenerDetalleDerivacionPendiente(
     codigoDerivacion: DetalleDerivacionesPendientesDto,
   ): Promise<ResultadoDetalleDerivacion> {
@@ -104,19 +157,18 @@ export class DerivacionesRepository {
       };
     } catch (error) {
       console.error('Error al obtener detalle de la derivacion:', error);
-      throw new Error(
-        `Error en DerivacionesRepository: ${error.message}`,
-      );
+      throw new Error(`Error en DerivacionesRepository: ${error.message}`);
     }
   }
 
-    /**
-     * Obtiene las derivaciones de un beneficiario.
-     * @param params - Objeto que contiene el código de autorización y el RUT del beneficiario.
-     * @returns Un objeto DerivacionBeneficiarioResponse con los datos de las derivaciones y mensajes de error o éxito.
-     */
-  async obtenerDerivacionesBeneficiarios(params: ListarDerivacionesDto): Promise<DerivacionBeneficiarioResponse> {
-
+  /**
+   * Obtiene las derivaciones de un beneficiario.
+   * @param params - Objeto que contiene el código de autorización y el RUT del beneficiario.
+   * @returns Un objeto DerivacionBeneficiarioResponse con los datos de las derivaciones y mensajes de error o éxito.
+   */
+  async obtenerDerivacionesBeneficiarios(
+    params: ListarDerivacionesDto,
+  ): Promise<DerivacionBeneficiarioResponse> {
     try {
       const result = await this.connection.execute(
         `BEGIN INTEGRACION.P_LISTAR_GEO_AUTORIZACIONES(
@@ -140,7 +192,7 @@ export class DerivacionesRepository {
             type: oracledb.STRING,
             maxSize: 4000,
           },
-        }
+        },
       );
       const outBinds = result.outBinds as unknown as {
         vocur_datos: oracledb.ResultSet<any>;
@@ -158,10 +210,44 @@ export class DerivacionesRepository {
       };
     } catch (error) {
       console.error('Error al obtener derivaciones de beneficiarios:', error);
-      throw new Error(
-        `Error en DerivacionesRepository: ${error.message}`,
+      throw new Error(`Error en DerivacionesRepository: ${error.message}`);
+    }
+  }
+
+  
+  /**
+   * Obtiene los motivos de rechazo de una derivación.
+   * @returns Un objeto ResultadoProcedimiento con los datos de los motivos y mensajes de error o éxito.
+   */
+  async obtenerMotivoRechazoDerivacion() {
+    try {
+      const result = await this.connection.execute(
+        `BEGIN
+         INTEGRACION.P_GEO_OBTENER_MOTIVOS_RECHAZO(:cursor);
+       END;`,
+        {
+          cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        },
       );
-      
+      const outBinds = result.outBinds as unknown as {
+        cursor: oracledb.ResultSet<any>;
+      };
+  
+      const outCursor = outBinds.cursor;
+      const rows = await outCursor.getRows();
+      await outCursor.close();
+  
+      return {
+        datos: rows,
+        codigoMensaje: '0', // Código de éxito
+        mensaje: 'Motivos de rechazo obtenidos correctamente',
+      };
+    } catch (error) {
+      console.error(
+        'Error al obtener motivo de rechazo de la derivación:',
+        error,
+      );
+      throw new Error(`Error en DerivacionesRepository: ${error.message}`);
     }
   }
 }

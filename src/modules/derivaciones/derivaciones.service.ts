@@ -2,16 +2,22 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   DerivacionesPendientesDto,
   DetalleDerivacionesPendientesDto,
+  ListarDerivacionesDzDto,
 } from './dtos/derivaciones-pendientes.dto';
 import {
   BSConsultarDetalleDerivacionOutput,
+  BSListarDerivacionesManualesOutput,
   DerivacionCompleta,
   DerivacionPendiente,
   ResultadoFinal,
 } from './interfaces/derivaciones.interface';
 import { DerivacionesRepository } from './repositories/derivaciones.repository';
 import { ApiClienteService } from '../shared/services/api-cliente/api-cliente.service';
-import { getNombreBeneficiario, getNombreComuna, getNombreRegion } from '../shared/utils/utils';
+import {
+  getNombreBeneficiario,
+  getNombreComuna,
+  getNombreRegion,
+} from '../shared/utils/utils';
 import { OhiRepository } from '../shared/repositories/ohiRepository';
 import { ListarDerivacionesDto } from './dtos/derivaciones-beneficiario.dto';
 
@@ -187,9 +193,16 @@ export class DerivacionesService {
           Codigo_estado: item[11],
           Estado: item[12],
           Tramo: item[13],
-          nombrePrestador: await this.ohiRepository.obtenerNombrePrestador(item[3]),
-          nombrePrestacion: await this.ohiRepository.obtenerNombrePrestacion(item[2]),
-          nombreBeneficiario: await getNombreBeneficiario(item[4], this.apiClienteService),
+          nombrePrestador: await this.ohiRepository.obtenerNombrePrestador(
+            item[3],
+          ),
+          nombrePrestacion: await this.ohiRepository.obtenerNombrePrestacion(
+            item[2],
+          ),
+          nombreBeneficiario: await getNombreBeneficiario(
+            item[4],
+            this.apiClienteService,
+          ),
         };
       }),
     );
@@ -199,5 +212,80 @@ export class DerivacionesService {
       mensaje: data.mensaje,
       datos: datosTransformados,
     };
+  }
+
+  async listarDerivacionesDz(
+    codigoDZ: ListarDerivacionesDzDto,
+  ): Promise<BSListarDerivacionesManualesOutput[]> {
+    const [motivosRechazo, derivacionesPendientesDz] = await Promise.all([
+      this.derivacionesRepository.obtenerMotivoRechazoDerivacion(),
+      this.derivacionesRepository.obtenerDerivacionesManualesDz(codigoDZ),
+    ]);
+
+    // Crear un mapa para motivos de rechazo para acceso rápido
+    const motivosRechazoMap = new Map(
+      motivosRechazo.datos.map((motivo: any) => [motivo[0], motivo[1]]),
+    );
+
+    const datosTransformados = await Promise.all(
+      derivacionesPendientesDz.datos.map(async (item: any) => {
+        const run = `${item[4]}-${item[5]}`;
+
+        
+        const [
+          infoBeneficiario,
+          nombrePrestador,
+          nombrePrestacion,
+          nombreComuna,
+          nombreRegion,
+        ] = await Promise.all([
+          this.apiClienteService.consultaBaseBeneficiario(run),
+          this.ohiRepository.obtenerNombrePrestador(item[10]),
+          this.ohiRepository.obtenerNombrePrestacion(item[8]),
+          getNombreComuna(item[12], item[14], this.apiClienteService),
+          getNombreRegion(item[14], this.apiClienteService),
+        ]);
+
+        return {
+          codigoDerivacion: item[0],
+          nombres: infoBeneficiario.infoTitular?.nombres || '',
+          apellidoPaterno: infoBeneficiario.infoTitular?.apellidoPaterno || '',
+          apellidoMaterno: infoBeneficiario.infoTitular?.apellidoMaterno || '',
+          run: item[4],
+          dv: item[5],
+          codigoBeneficiario: item[6],
+          fechaDerivacion: item[7],
+          codigoPrestacion: item[8],
+          nombrePrestacion,
+          codigoPrestadorPublico: item[10],
+          direccion: item[11],
+          codigoComuna: item[12],
+          nombreComuna,
+          codigoRegion: item[14],
+          nombreRegion,
+          nombrehospital: nombrePrestador,
+          motivoRechazo: await this.obtenerNombreMotivoPorCodigo(
+            item[17],
+            motivosRechazoMap,
+          ),
+          comentarioRechazo: item[18] || null,
+        };
+      }),
+    );
+
+    return datosTransformados;
+  }
+
+  private async obtenerNombreMotivoPorCodigo(
+    codigo: number,
+    motivosRechazoMap: Map<number, string>,
+  ): Promise<string | null> {
+    if (codigo === null || codigo === undefined) {
+      return null;
+    }
+    // Buscar el motivo en el Map
+    const motivo = motivosRechazoMap.get(+codigo);
+    // Retornar el motivo o null si no existe
+    return motivo || null;
   }
 }

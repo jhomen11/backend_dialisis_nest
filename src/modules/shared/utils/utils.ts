@@ -1,50 +1,86 @@
 import { BSConsultarRutBeneficiarioOutput } from 'src/modules/data-beneficiario/interfaces/data-beneficiario.interface';
 import { ApiClienteService } from '../services/api-cliente/api-cliente.service';
 
+
+const regionesCache = new Map<string, string>();
+
+setInterval(() => regionesCache.clear(), 1800000);
+
 export async function getNombreRegion(
   codigoRegion: string,
   apiClienteService: ApiClienteService,
 ): Promise<string> {
+
+  if (!codigoRegion?.trim()) return 'Sin Región';
+
+  const codigo = codigoRegion.trim();
+
+  // 1. Primero verificar si está en cache
+  if (regionesCache.has(codigo)) {
+    return regionesCache.get(codigo) || 'Sin Región';
+  }
+
   try {
+    // 2. Si no está en cache, obtener datos de la API
     const dataRegion = await apiClienteService.listarRegiones();
 
+    // 3. Procesar y cachear todas las regiones
     if (dataRegion.bodyResponse.coleccion.item) {
-      for (const region of dataRegion.bodyResponse.coleccion.item) {
-        if (region.codigoPrincipal === codigoRegion.trim()) {
-          return region.descripcion;
-        }
-      }
+      // Llenar el cache con todas las regiones obtenidas
+      dataRegion.bodyResponse.coleccion.item.forEach(region => {
+        regionesCache.set(region.codigoPrincipal, region.descripcion);
+      });
     }
-    return 'Sin Región';
+
+    // 4. Devolver la región solicitada (o 'Sin Región' si no existe)
+    return regionesCache.get(codigo) || 'Sin Región';
   } catch (error) {
     console.error('Error al obtener el nombre de la región:', error);
     return 'Sin Región';
   }
 }
 
+const comunasCache = new Map<string, string>();
+
+// Limpieza automática cada 30 minutos
+setInterval(() => comunasCache.clear(), 1800000);
+
 export async function getNombreComuna(
   codigoComuna: string,
   codigoRegion: string,
   apiClienteService: ApiClienteService,
 ): Promise<string> {
-  try {
-    const dataComuna = await apiClienteService.listarComuna(
-      codigoRegion.trim(),
-    );
+  if (!codigoComuna?.trim() || !codigoRegion?.trim()) return 'Sin comuna';
 
+  const codigoCom = codigoComuna.trim();
+  const codigoReg = codigoRegion.trim();
+  
+  // Creamos una clave compuesta para el cache (región + comuna)
+  const cacheKey = `${codigoReg}_${codigoCom}`;
+
+  // Verificar cache
+  if (comunasCache.has(cacheKey)) {
+    return comunasCache.get(cacheKey)!;
+  }
+
+  try {
+    const dataComuna = await apiClienteService.listarComuna(codigoReg);
+    
     if (dataComuna.bodyResponse.coleccion.item) {
-      for (const comuna of dataComuna.bodyResponse.coleccion.item) {
-        if (comuna.codigoPrincipal === codigoComuna.trim()) {
-          return comuna.descripcion;
-        }
-      }
+      // Poblar cache con todas las comunas de esta región
+      dataComuna.bodyResponse.coleccion.item.forEach(comuna => {
+        const key = `${codigoReg}_${comuna.codigoPrincipal.trim()}`;
+        comunasCache.set(key, comuna.descripcion);
+      });
     }
-    return 'Sin comuna';
+
+    return comunasCache.get(cacheKey) || 'Sin comuna';
   } catch (error) {
     console.error('Error al obtener el nombre de la comuna:', error);
     return 'Sin comuna';
   }
 }
+
 
 export const getNombreBeneficiario = async (
   rut: string,
